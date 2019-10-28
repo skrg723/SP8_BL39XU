@@ -1,11 +1,11 @@
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
 
 //=========================================================
-macro LoadMCD(path, fname, wnini)		//�Ό��ϒ�MCD�f�[�^�t�@�C����ǂݍ��ރ}�N��
+macro LoadMCD(path, fname, wnini)		//偏光変調MCDデータファイルを読み込むマクロ
 string path fname, wnini
-// path: �t�@�C���̂���f�B���N�g���̃p�X������ ("" �Ȃ�΃t�@�C���_�C�A���O)
-// fname: �t�@�C���l�[�� ("" �Ȃ�΃t�@�C���_�C�A���O)
-// wnini: wave���̋��ʕ�����
+// path: ファイルのあるディレクトリのパス文字列 ("" ならばファイルダイアログ)
+// fname: ファイルネーム ("" ならばファイルダイアログ)
+// wnini: wave名の共通文字列
 
 	variable a = 5.4297094		// Si lattice constant at LN2 temperature,  in Angstrom
 	variable h = 1, k = 1, l = 1
@@ -36,20 +36,20 @@ end
  
  
 /////26th, Oct. 2019: ver1.0		S.Sakuragi
-/////�g����
-/////�R���p�C�������Macros�o�[�̂Ƃ���Ƀf�[�^��荞�݂̃��j���[���o�܂��B
-/////"MCD: load file"��I������ƁA�w��t�@�C��1��������荞�݂܂��B
-/////"MCD: load folder"��I������ƁA�w��t�H���_���̖���荞��".dat"�t�@�C����S�Ď�荞�݂܂��B
+/////使い方
+/////コンパイルするとMacrosバーのところにデータ取り込みのメニューが出ます。
+/////"MCD: load file"を選択すると、指定ファイル1つだけを取り込みます。
+/////"MCD: load folder"を選択すると、指定フォルダ内の未取り込み".dat"ファイルを全て取り込みます。
 /////
-/////�������O(�Ⴆ��"hogehogePtL2_8K_(����ԍ�00x, ����̐���(p or n)).dat")�Ƃ������f�[�^�t�@�C���Ȃ�A�ꊇ�ŐώZ���s���܂��B
-/////�f�[�^��荞�݌�ɁA�f�[�^�u���E�U�Ńf�[�^�̕ۑ��t�H���_���w��(�悭�킩��Ȃ���΁Acd MCD_loader�����s���Ă�������)��A
-/////���L�R�}���h����͂���ƁA�ώZ�����s����܂��B
+/////同じ名前(例えば"hogehogePtL2_8K_(測定番号00x, 磁場の正負(p or n)).dat")といったデータファイルなら、一括で積算が行えます。
+/////データ取り込み後に、データブラウザでデータの保存フォルダを指定(よくわからなければ、cd MCD_loaderを実行してください)後、
+/////下記コマンドを入力すると、積算が実行されます。
 /////sekisan("XMCD_FePtMgO_PtL2_8K")
-/////���ꂪ���̂Ƃ��ƕ��̂Ƃ�(�f�[�^������p��m��)�̃f�[�^��p���ăo�b�N�O���E���h�␳���s���܂��B
-/////�ώZ���ʂ�"hogehoge_pxaM"��A"hogehoge_mcM"�Ƃ����������ŏo�͂���܂��B
+/////磁場が正のときと負のとき(データ末尾がpかnか)のデータを用いてバックグラウンド補正が行えます。
+/////積算結果は"hogehoge_pxasM"や、"hogehoge_mcdM"といった感じで出力されます。
 /////
-/////�G�ɍ�����}�N���Ȃ̂ō������Ƃ����Ă��܂��񂵁A�O�`���O�`���Ƀ��[�v�⏈�������藐��Ă��܂��B���݂܂���B
-/////���Ƃ͎������Ɏg���₷���悤�Ɏ蒼�����Ĕz�z��������������܂���B
+/////雑に作ったマクロなので高速化とかしていませんし、グチャグチャにループや処理が入り乱れています。すみません。
+/////あとは実験中に使いやすいように手直しして配布し直すかもしれません。
 /////
 
 Menu "Macros"
@@ -279,18 +279,18 @@ string wnlist
 end
 
 //=========================================================
-// CT32-01E�ɂ��XMCD��sum�f�[�^�t�@�C����ǂݍ��ރ}�N�� (2019.4.25)
-// dead time �␳���s��
-// �g��Ȃ��f�q���}�X�N�\
-// ESM�����sum�f�[�^���ǂݍ��݉\
+// CT32-01EによるXMCDのsumデータファイルを読み込むマクロ (2019.4.25)
+// dead time 補正も行う
+// 使わない素子をマスク可能
+// ESM測定のsumデータも読み込み可能
 
-Constant Flag_16ch_only = 1		// 32ch�̂����A16ch�̕��̃f�[�^�����ۑ�����Ă��Ȃ��t�@�C���ɑ΂��ẮA���̒萔�� 1�Ƃ��邱�ƁB
+Constant Flag_16ch_only = 1		// 32chのうち、16chの分のデータしか保存されていないファイルに対しては、この定数を 1とすること。
 
 macro LoadMCD_CT32_sum(path, fname, wnini, fluo_SCA, total_SCA, deadTime, SDD_ElementMask, ESM_flag)
 string path, fname, wnini
-variable fluo_SCA, total_SCA	// �ړI�̌u����SCA ch, total��SCA ch (1�`4)
-string deadTime		// 4�f�q����deadTime��wave���B�P��: �b
-string SDD_ElementMask	// 4�f�qSDD�̂ǂ̑f�q�̃f�[�^���g�����́A�}�X�N�̂��߂̕�����B"1111"...4�f�q�S�Ďg�p�B"1101" ... 3�f�q��(ch2)�s�g�p
+variable fluo_SCA, total_SCA	// 目的の蛍光のSCA ch, totalのSCA ch (1～4)
+string deadTime		// 4素子分のdeadTimeのwave名。単位: 秒
+string SDD_ElementMask	// 4素子SDDのどの素子のデータを使うかの、マスクのための文字列。"1111"...4素子全て使用。"1101" ... 3素子目(ch2)不使用
 variable ESM_flag	// 0: XMCD, 1: ESM
 
 	variable wk
@@ -403,12 +403,12 @@ variable ESM_flag	// 0: XMCD, 1: ESM
 	$mcd_Corr = $xasR_Corr - $xasL_Corr
 	$xasAve_Corr = $xasR_Corr/2 + $xasL_Corr/2
 	
-	if (ESM_flag==0)		// XMCD�̏ꍇ�A�G�l���M�[�ɂ��������ăf�[�^���\�[�g����
+	if (ESM_flag==0)		// XMCDの場合、エネルギーにしたがってデータをソートする
 		Sort  $ene, $ene, $xas_R, $xasR_Corr, $xas_L, $xasL_Corr, $mcd_Corr, $xasAve_Corr
 		SetScale/I x $ene[0]*1000,$ene[numpnts($ene)-1]*1000,"eV", $ene, $xas_R, $xasR_Corr, $xas_L, $xasL_Corr, $mcd_Corr, $xasAve_Corr
 	endif
 	
-	// ���f�[�^���T�u�t�H���_�[�Ɉړ�
+	// 生データをサブフォルダーに移動
 	string subFolder = wnini + "_rawData"
 	NewDataFolder /O $subFolder
 	string s
@@ -423,7 +423,7 @@ variable ESM_flag	// 0: XMCD, 1: ESM
 End
 
 //=========================================================
-// �u���w�����o�� (SDD) �̕s�����Ԃ̕␳���s��
+// 蛍光Ｘ線検出器 (SDD) の不感時間の補正を行う
 function deadTimeCorr(N_fluo, N_tot, countTime, tau)
 variable N_fluo, N_tot, countTime, tau
 
