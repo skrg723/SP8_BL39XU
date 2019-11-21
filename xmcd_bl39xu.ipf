@@ -17,10 +17,19 @@
 /////雑に作ったマクロなので高速化とかしていませんし、グチャグチャにループや処理が入り乱れています。すみません。
 /////あとは実験中に使いやすいように手直しして配布し直すかもしれません。
 /////
+/////
+/////22th, Nov. 2019: ver1.1		S.Sakuragi
+/////XMCDヒステリシス測定の読み込み・積算の機能追加
+/////ESM_sekisan("hogehoge")
+/////"ESM: load file"
+/////
+/////
+
 
 Menu "Macros"
 	"MCD: load folder", load_folder()
 	"MCD: load file", load_file()
+	"ESM: load file", load_ESM()
 //	"_LoadMCD", LoadMCD(path, fname, wnini)
 //	"_LoadMCD_CT32_sum", LoadMCD_CT32_sum(path, fname, wnini, fluo_SCA, total_SCA, deadTime, SDD_ElementMask, ESM_flag)
 End
@@ -227,6 +236,86 @@ function sekisan(wv)
 	killwaves dumm_pxas, dumm_nxas,dumm_pmcd,dumm_nmcd, xasM,mcdM
 	
 end
-	
-	
+
 /////////
+/////2019.11.22	
+/////////
+
+Function load_ESM()
+	String cdf=GetDataFolder(1)
+	NewPath/O/Q/M="Select data folder" path
+ 	if (V_flag != 0) 
+		return -1; 
+ 	endif
+ 	pathinfo path
+ 	String name; Variable i
+ 	Prompt name, "select file", popup, IndexedFile(path, -1, ".dat")
+	print name
+	DoPrompt "file loader", name
+	If(V_flag)
+		abort
+	Endif
+	string fileID
+	NewDataFolder/O/S root:ESM_loader
+	SetDatafolder root:ESM_loader
+	String str=hoge(name, fileID, i); str=ReplaceString(";", str, "")
+	name=ReplaceString(".dat", name, ""); name=ReplaceString("-", name, "")
+	//scale_and_note()
+
+//	variable a = 5.4297094		// Si lattice constant at LN2 temperature,  in Angstrom
+//	variable h = 1, k = 1, l = 1
+//	wave loadnum1, loadnum8
+//	loadnum8 =  theta_to_E(loadnum1, a, h, k, l)
+	Rename loadnum0 $name + "_ene"
+	Rename loadnum2 $name + "_field"
+	Rename loadnum6 $name + "_MCD"
+	Rename loadnum7 $name + "_xas"
+//	Rename loadnum8 $name + "_eneMeas"
+	wave loadnum1,loadnum3,loadnum4,loadnum5, loadnum8
+	wave/T loadnote0
+	Killwaves loadnote0,loadnum1,loadnum3,loadnum4,loadnum5,loadnum8
+	KillDataFolder $str
+	cd cdf
+End
+
+
+Function ESM_sekisan(int)
+	string int 
+	make/O dumm_MCD
+	String wvname_MCD = int +"*MCD"
+	String list = wavelist(wvname_MCD,";",""); list = SortList(list, ";", 16)
+	Variable num=ItemsInList(list), i
+	For(i=0; i<num; i+=1)
+		String name_MCD=StringFromList(i, list)
+		wave wave_MCD=$name_MCD
+		variable size=dimsize(wave_MCD,0)
+		redimension/N=(size) dumm_MCD
+		dumm_MCD = dumm_MCD +wave_MCD
+		//copyscales wave_MCD, dumm_MCD
+	Endfor
+	dumm_MCD = dumm_MCD/num
+	duplicate/O dumm_MCD $int +"_MCD_M"
+	killwaves dumm_MCD
+
+	make/O dumm_xas
+	String wvname_xas = int +"*xas"
+	String list_xas = wavelist(wvname_xas,";",""); list = SortList(list_xas, ";", 16)
+	Variable num_xas=ItemsInList(list_xas), j
+	For(j=0; j<num_xas; j+=1)
+		String name_xas=StringFromList(j, list_xas)
+		wave wave_xas=$name_xas
+		variable size_xas=dimsize(wave_xas,0)
+		redimension/N=(size_xas) dumm_xas
+		dumm_xas = dumm_xas +wave_xas
+		//copyscales wave_MCD, dumm_MCD
+	Endfor
+	dumm_xas = dumm_xas/num
+	duplicate/O dumm_xas $int +"_xas_M"
+	killwaves dumm_xas
+
+end
+
+
+////////////
+
+
