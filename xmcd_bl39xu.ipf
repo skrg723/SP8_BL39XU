@@ -24,12 +24,20 @@
 /////"ESM: load file"
 /////
 /////
+/////24th, Nov. 2019: ver1.1.1		S.Sakuragi
+/////ESMの軽微な修正
+/////関数: ESM_sekisan("hogehoge")
+/////Macroメニュー"ESM: load folder"
+/////Macroメニュー"ESM: load file"
+/////
+/////
 
 
 Menu "Macros"
 	"MCD: load folder", load_folder()
 	"MCD: load file", load_file()
-	"ESM: load file", load_ESM()
+	"ESM: load folder", load_ESM_folder()
+	"ESM: load file", load_ESM_file()
 //	"_LoadMCD", LoadMCD(path, fname, wnini)
 //	"_LoadMCD_CT32_sum", LoadMCD_CT32_sum(path, fname, wnini, fluo_SCA, total_SCA, deadTime, SDD_ElementMask, ESM_flag)
 End
@@ -241,7 +249,7 @@ end
 /////2019.11.22	
 /////////
 
-Function load_ESM()
+Function load_ESM_file()
 	String cdf=GetDataFolder(1)
 	NewPath/O/Q/M="Select data folder" path
  	if (V_flag != 0) 
@@ -275,6 +283,50 @@ Function load_ESM()
 	wave/T loadnote0
 	Killwaves loadnote0,loadnum1,loadnum3,loadnum4,loadnum5,loadnum8
 	KillDataFolder $str
+	cd cdf
+End
+
+Function load_ESM_folder()
+	String cdf=GetDataFolder(1)
+	NewPath/O/Q/M="Select data folder" path
+ 	if (V_flag != 0) 
+		return -1; // User cancelled. 
+ 	endif
+ 	pathinfo path
+ 	String list = IndexedFile(path, -1, ".dat"); list = SortList(list, ";", 16)
+	Variable num=ItemsInList(list), i
+	String fileID
+	NewDataFolder/O/S root:ESM_loader
+	SetDatafolder root:ESM_loader
+	If(WaveExists($"file_name")==0)
+		Make/O/T/N=(0) file_name; Wave/T wvname=file_name 
+	Else
+		Wave/T wvname=file_name 
+	Endif
+	killwaves file_name
+	For(i=0; i<num; i+=1)
+		String name=StringFromList(i, list); name=ReplaceString(".dat", name, ""); name=ReplaceString("-", name, "")
+		Variable n=check_name(name, wvname)
+		If(n!=0)
+			String str=hoge(list, fileID, i); str=ReplaceString(";", str, "")
+			name=ReplaceString(".dat", name, ""); name=ReplaceString("-", name, "")
+			//scale_and_note()
+		
+		//	variable a = 5.4297094		// Si lattice constant at LN2 temperature,  in Angstrom
+		//	variable h = 1, k = 1, l = 1
+		//	wave loadnum1, loadnum8
+		//	loadnum8 =  theta_to_E(loadnum1, a, h, k, l)
+			Rename loadnum0 $name + "_ene"
+			Rename loadnum2 $name + "_field"
+			Rename loadnum6 $name + "_MCD"
+			Rename loadnum7 $name + "_xas"
+		//	Rename loadnum8 $name + "_eneMeas"
+			wave loadnum1,loadnum3,loadnum4,loadnum5, loadnum8
+			wave/T loadnote0
+			Killwaves loadnote0,loadnum1,loadnum3,loadnum4,loadnum5,loadnum8
+			KillDataFolder $str
+		Endif
+	Endfor
 	cd cdf
 End
 
